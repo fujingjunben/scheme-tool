@@ -28,21 +28,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; projecteuler 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define numb 600851475143)
-
-(define (demp-1 n)
-  (let ((lat (find-divisor-1 n 2)))
-	(cond ((null? (cdr lat)) lat)
-		  ((prime? (car lat))
-		   (cons (car lat)
-				 (demp-1 (cadr lat))))
-		  (else (append (demp (car lat))
-					  (demp-1 (cadr lat)))))))
-
-(define (find-divisor-1 n test-divisor)
-  (cond ((> (square test-divisor) n) (list n))
-		((divide? test-divisor n) (list  (/ n test-divisor) test-divisor))
-		(else (find-divisor-1 n (+ test-divisor 1)))))
 
 (define (divide? a b)
   (= (remainder b a) 0))
