@@ -28,7 +28,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; projecteuler 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define (divide? a b)
   (= (remainder b a) 0))
 
@@ -36,10 +35,13 @@
   (* n n))
 
 (define (prime? n)
-  (and (> n 1) (= (smallest-divisor n) n)))
-
-(define (smallest-divisor n)
-  (car (find-divisor n 2)))
+  (define (find-divisor n test-divisor)
+	(cond ((> (square test-divisor) n) (list n))
+		  ((divide? test-divisor n) (list  test-divisor (/ n test-divisor)))
+		  (else (find-divisor n (+ test-divisor 2)))))
+  (if (even? n)
+	  (= 2 n)
+	  (= n (car (find-divisor n 3)))))
 
 (define (demp n)
   (let ((lat (find-divisor n 2)))
@@ -121,8 +123,6 @@
 (define (char->int c)
   (- (char->integer c) 48))
 
-(define la (str->integer num8))
-
 (define (chip-list nth lat)
   (define (chip n lat)
     (cond ((null? lat) lat)
@@ -173,3 +173,63 @@
 (define (euler9)
   (let ((trip (find-triplet 100)))
     (apply * trip)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; euler 10
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (prime-sum sum nth limit)
+ (if (> nth limit)
+	 sum
+	 (let ((a (- (* nth 6) 1))
+		   (b (+ (* nth 6) 1)))
+	   (if (> nth limit)
+		   sum
+		   (cond ((and (prime? a) (prime? b))
+				  (prime-sum (+ sum a b) (+ 1 nth) limit))
+				 ((prime? a)
+				  (prime-sum (+ sum a) (+ 1 nth) limit))
+				 ((prime? b)
+				  (prime-sum (+ sum b) (+ 1 nth) limit))
+				 (else (prime-sum sum (+ 1 nth) limit)))))))
+
+
+(define (euler10)
+  (let ((start (current-inexact-milliseconds))
+		(sum (+ 5 (prime-sum 0 1 (quotient (* 2 (expt 10 6)) 6))))
+		(end (current-inexact-milliseconds)))
+	(displayln "sum is")
+	(displayln sum)
+	(displayln "comsume time is")
+	(displayln (/ (- end start) 1000))))
+
+(define (prime-1? n)
+  (define (helper nth limit)
+	(if (> nth limit)
+		#t
+		(let ((a (- (* 6 nth) 1))
+			  (b (+ (* 6 nth) 1)))
+		  (cond ((or (divide? a n) (divide? b n)) #f)
+				(else (helper (+ 1 nth) limit))))))
+
+  (cond ((or (= 2 n) (= 3 n) (= 5 n)))
+		((or (divide? 2 n) (divide? 3 n) (divide? 5 n)) #f)
+		(helper 1 (quotient n 36))))
+
+(define (time)
+  (current-inexact-milliseconds))
+
+(define (benchmark n)
+  (let ((start1 (time))
+		(r1 (prime? n))
+		(end1 (time))
+		(start2 (time))
+		(r2 (prime-3? n))
+		(end2 (time)))
+	(displayln "prime-sum consume time is")
+	(displayln (/ (- end1 start1) 1000))
+	(displayln r1)
+	(displayln "prime-sum-3? consume time is")
+	(displayln (/ (- end2 start2) 1000))
+	(displayln r2)))
+
