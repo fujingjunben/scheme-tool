@@ -242,30 +242,34 @@
 (define (diag-chip start end lat)
   (cond ((null? lat) lat)
         ((> start end) '())
-        (else (cons (col-select start (row-select start lat))
+        (else (cons (row-select start (row-select start lat))
                     (diag-chip (+ start 1) end lat)))))
 
 (define (frame-chip row col la)
   (row-chip row (col-chip col la)))
 
 
-(define (col-select nth lat)
-  (cond ((null? lat) lat)
-        ((= nth 1) (car lat))
-        (else (col-select (- nth 1) (cdr lat)))))
-
 (define (row-select nth lat)
   (cond ((null? lat) lat)
+        ((> nth (length lat))
+         (displayln "ERROR: number of rows out of range"))
+        ((= nth 1) (car lat))
+        (else (row-select (- nth 1) (cdr lat)))))
+
+(define (col-select nth lat)
+  (cond ((null? lat) lat)
+        ((> nth (length (car lat)))
+         (displayln "ERROR: number of columns out of range"))
         ; (x-cdr '((1) (2)))
         ; '(() ())
        ; ((null? (car lat)) lat)
         ((= nth 1) (col-car lat))
-        (else (row-select (- nth 1) (col-cdr lat)))))
+        (else (col-select (- nth 1) (col-cdr lat)))))
 
-(define (product-of-y lat)
+(define (product-of-col lat)
   (list-product (col-car lat)))
 
-(define (product-of-x lat)
+(define (product-of-row lat)
   (list-product (car lat)))
 
 (define (product-of-diag lat)
@@ -274,10 +278,7 @@
 (define (square-chip lat)
   (frame-chip 4 4 lat))
 
-(define (tup-value lat)
-  (list (product-of-x lat) (product-of-y lat) (product-of-diag)))
-
-(define (x-null? lat)
+(define (col-null? lat)
   (null? (car lat)))
 
 (define (bang? n lat)
@@ -292,18 +293,19 @@
 
 (define (product-right-end lat)
   (max (apply max (map *
-                       (x-select 1 lat)
-                       (x-select 2 lat)
-                       (x-select 3 lat)
-                     ; (x-select 4 lat)
-                       ))
+                       (row-select 1 lat)
+                       (row-select 2 lat)
+                       (row-select 3 lat)
+                       (row-select 4 lat)
+                       ))))
+
 (define (product-bottom lat)
-  (apply max  (map *
-                   (y-select 1 lat)
-                   (y-select 2 lat)
-                   (y-select 3 lat)
-                                        ; (y-select 4 lat)
-                   )))))
+  (max (apply max  (map *
+                        (col-select 1 lat)
+                        (col-select 2 lat)
+                        (col-select 3 lat)
+                        (col-select 4 lat)
+                        ))))
 
 (define la '(
 (08 02 22 97 38 15 00 40 00 75 04 05 07 78 52 12 50 77 91 08)
@@ -353,15 +355,15 @@
 
 (define (right max-value lat)
   (if (right-end? lat) (max max-value (product-right-end lat))
-      (let ((product-row (product-of-x (square-chip lat)))
-            (product-col (product-of-y (square-chip lat)))
+      (let ((product-row (product-of-row (square-chip lat)))
+            (product-col (product-of-col (square-chip lat)))
             (product-diag (product-of-diag (square-chip lat))))
         (right
          (max max-value product-row product-col product-diag)
-         (x-cdr lat)))))
+         (col-cdr lat)))))
 
 (define (down max-value lat)
-  (cond ((bottom? lat) (right max-value lat))
+  (cond ((bottom? lat) (max (right max-value lat) (product-bottom lat)))
         (else (down (right max-value lat) (cdr lat)))))
 
 (define (test proc)
@@ -376,8 +378,8 @@
       (displayln " seconds"))))
 
 (define la '(
-(1 1 1 1 1 1 2 1 1)
-(2 2 2 2 2 2 2 9 8)
-(5 3 3 3 3 3 4 4 5)
-(4 4 4 4 4 4 1 4 6)
+(1 1 1 1 1)
+(2 2 2 2 2)
+(3 3 3 3 6)
+(4 4 5 4 4)
 ))
