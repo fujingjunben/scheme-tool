@@ -190,18 +190,6 @@
   (let ((limit (quotient n 6)))
     (+ 5 (prime-sum 0 1 limit))))
 
-(define (euler10)
-  (let ((start (time))
-        (sum (sum-of-prime 2000000))
-        (end (time)))
-    (display "sum is ")
-    (displayln sum)
-    (display "comsume time is ")
-    (display (/ (- end start) 1000))
-    (displayln " seconds")))
-
-(define time current-inexact-milliseconds)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; euler 11
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -240,10 +228,15 @@
                     (col-chip nth (cdr lat))))))
 
 (define (diag-chip start end lat)
-  (cond ((null? lat) lat)
+  (cond ((null? lat) 
+         (displayln "ERROR: '()"))
         ((> start end) '())
         (else (cons (row-select start (row-select start lat))
                     (diag-chip (+ start 1) end lat)))))
+
+(define (reverse-diag-chip start end lat)
+  (let ((la (map reverse lat)))
+    (diag-chip start end la)))
 
 (define (frame-chip row col la)
   (row-chip row (col-chip col la)))
@@ -274,6 +267,9 @@
 
 (define (product-of-diag lat)
   (list-product (diag-chip 1 4 lat)))
+
+(define (product-of-reverse-diag lat)
+  (list-product (reverse-diag-chip 1 4 lat)))
 
 (define (square-chip lat)
   (frame-chip 4 4 lat))
@@ -354,22 +350,28 @@
 
 
 (define (right max-value lat)
-  (if (right-end? lat) (max max-value (product-right-end lat))
+  (if (right-end? lat) 
+      (begin
+        (displayln (list max-value (product-right-end lat)))
+        (max max-value (product-right-end lat)))
       (let ((product-row (product-of-row (square-chip lat)))
             (product-col (product-of-col (square-chip lat)))
-            (product-diag (product-of-diag (square-chip lat))))
-        (right
-         (max max-value product-row product-col product-diag)
-         (col-cdr lat)))))
+            (product-diag (product-of-diag (square-chip lat)))
+            (product-reverse-diag (product-of-reverse-diag (square-chip lat))))
+        (begin
+          (displayln (list max-value product-row product-col product-diag product-reverse-diag))
+          (right
+           (max max-value product-row product-col product-diag product-reverse-diag)
+           (col-cdr lat))))))
 
 (define (down max-value lat)
   (cond ((bottom? lat) (max (right max-value lat) (product-bottom lat)))
         (else (down (right max-value lat) (cdr lat)))))
 
 (define (test proc)
-  (let ((start (time))
+  (let ((start (current-inexact-milliseconds))
         (result proc)
-        (end (time)))
+        (end (current-inexact-milliseconds)))
     (begin
       (display "The result is ")
       (displayln result)
@@ -379,7 +381,7 @@
 
 (define la '(
 (1 1 1 1 1)
-(2 2 2 2 2)
-(3 3 3 3 6)
+(2 2 3 2 2)
+(3 8 3 3 6)
 (4 4 5 4 4)
 ))
