@@ -28,31 +28,106 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; projecteuler 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (divide? a b)
+(define (divide? b a)
   (= (remainder b a) 0))
 
 (define (square n)
   (* n n))
 
-(define (prime? n)
+(define (prime-1n)
   (define (find-divisor n test-divisor)
-	(cond ((> (square test-divisor) n) (list n))
-		  ((divide? test-divisor n) (list  test-divisor (/ n test-divisor)))
+	(cond ((> (square test-divisor) n) #t)
+		  ((divide? test-divisor n) #f)
 		  (else (find-divisor n (+ test-divisor 2)))))
   (if (even? n)
 	  (= 2 n)
-	  (= n (car (find-divisor n 3)))))
+	  (find-divisor n 3)))
 
-(define (demp n)
-  (let ((lat (find-divisor n 2)))
-	(cond ((null? (cdr lat)) lat)
-		  (else (cons (car lat)
-			 (demp (cadr lat)))))))
+(define (demp-1 n)
+  (define (find-divisor n test-divisor)
+    (cond
+     ((prime? n) (list n))
+     ((even? n) (cons 2 (find-divisor (/ n 2) test-divisor)))
+     ((= 0 (remainder n test-divisor))
+      (cons test-divisor (find-divisor (/ n test-divisor ) test-divisor)))
+     (else (find-divisor n (+ test-divisor 2)))))
+  (find-divisor n 3))
+
+(define (demp-2 n)
+  (let ((lat (find-divisor n 3)))
+        (cond
+         ((null? (cdr lat)) lat)
+         (else
+          (cons 
+           (car lat)
+           (demp-2 (cadr lat)))))))
 
 (define (find-divisor n test-divisor)
-  (cond ((> (square test-divisor) n) (list n))
-		((divide? test-divisor n) (list  test-divisor (/ n test-divisor)))
-		(else (find-divisor n (+ test-divisor 1)))))
+  (cond 
+   ((prime? n)
+    (list n))
+   ((even? n)
+    (list 2 (/ n 2)))
+   ((divide? test-divisor n)
+    (list test-divisor (/ n test-divisor)))
+   (else
+    (find-divisor n (+ test-divisor 2)))))
+
+(define (prime? n)
+  (define (traverse lat) 
+    (cond
+     ((null? lat)
+      #t)
+     ((divide? n (car lat))
+      #f)
+     (else
+      (traverse (cdr lat)))))
+  (let ((prime-list (soe (integer-sqrt n))))
+    (traverse prime-list)))
+
+(define (demp n)
+  (define (find-divisor n lat)
+    (cond
+     ((null? lat)
+      (cond
+       ((= n 1) 
+        '())
+       (else
+        (list n))))
+     ((divide? n (car lat))
+      (cons
+       (car lat)
+       (find-divisor (/ n (car lat)) lat)))
+     (else
+      (find-divisor n (cdr lat)))))
+  
+  (let ((prime-list (soe (integer-sqrt n))))
+    (find-divisor n prime-list)))
+
+(define (soe n)
+  (define (compute-soe i j prime-vector)
+    (cond 
+     ((> (square i) n)
+      prime-vector)
+     (else
+      (let ((idx (* i (+ i j))))
+        (cond
+         ((and (vector-ref prime-vector i) (<= idx n))
+          (begin
+            (vector-set! prime-vector idx #f)
+            (compute-soe i (+ j 1) prime-vector)))
+         (else (compute-soe (+ i 1) 0 prime-vector)))))))
+
+  (define (print-soe i prime-list)
+    (cond
+     ((> i n) '())
+     ((car prime-list)
+      (cons i (print-soe (+ i 1) (cdr prime-list))))
+     (else (print-soe (+ i 1) (cdr prime-list)))))
+  
+  (let ((prime-vector (make-vector (+ n 1) #t)))
+    (compute-soe 2 0 prime-vector)
+    (print-soe 2 (cddr (vector->list prime-vector)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; projecteuler 4
@@ -88,10 +163,12 @@
   (* 2 (gather-sum 0 la)))
 
 (define (gather-sum sum lat)
-  (cond ((null? lat) sum)
-		(else (gather-sum
-			   (+ sum (* (car lat) (list-sum (cdr lat))))
-			   (cdr lat)))))
+  (cond
+   ((null? lat) sum)
+   (else
+    (gather-sum
+     (+ sum (* (car lat) (list-sum (cdr lat))))
+     (cdr lat)))))
 
 (define (list-sum lat)
   (apply + lat))
@@ -110,11 +187,13 @@
   (find-prime 1 1 order))
 
 (define (find-prime n m order)
-  (cond ((= 1 order) 2)
-        ((= n order) m)
-        ((prime? (+ m 2)) 
-         (find-prime (+ n 1) (+ m 2) order))
-        (else (find-prime n (+ m 2) order))))
+  (cond 
+   ((= 1 order) 2)
+   ((= n order) m)
+   ((prime? (+ m 2)) 
+    (find-prime (+ n 1) (+ m 2) order))
+   (else
+    (find-prime n (+ m 2) order))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; euler 8
@@ -127,10 +206,13 @@
   (- (char->integer c) 48))
 
 (define (chip-dec nth lat)
-  (cond ((null? lat) '())
-        ((> nth (length lat)) '())
-          (else (cons (chip-list nth lat)
-                      (chip-dec nth (cdr lat))))))
+  (cond 
+   ((null? lat) '())
+   ((> nth (length lat)) '())
+   (else
+    (cons 
+     (chip-list nth lat)
+     (chip-dec nth (cdr lat))))))
 
 (define (list-product lat)
   (apply * lat))
@@ -303,63 +385,19 @@
                         (col-select 4 lat)
                         ))))
 
-(define la '(
-(08 02 22 97 38 15 00 40 00 75 04 05 07 78 52 12 50 77 91 08)
-(49 49 99 40 17 81 18 57 60 87 17 40 98 43 69 48 04 56 62 00)
-(81 49 31 73 55 79 14 29 93 71 40 67 53 88 30 03 49 13 36 65)
-(52 70 95 23 04 60 11 42 69 24 68 56 01 32 56 71 37 02 36 91)
-(22 31 16 71 51 67 63 89 41 92 36 54 22 40 40 28 66 33 13 80)
-(24 47 32 60 99 03 45 02 44 75 33 53 78 36 84 20 35 17 12 50)
-(32 98 81 28 64 23 67 10 26 38 40 67 59 54 70 66 18 38 64 70)
-(67 26 20 68 02 62 12 20 95 63 94 39 63 08 40 91 66 49 94 21)
-(24 55 58 05 66 73 99 26 97 17 78 78 96 83 14 88 34 89 63 72)
-(21 36 23 09 75 00 76 44 20 45 35 14 00 61 33 97 34 31 33 95)
-(78 17 53 28 22 75 31 67 15 94 03 80 04 62 16 14 09 53 56 92)
-(16 39 05 42 96 35 31 47 55 58 88 24 00 17 54 24 36 29 85 57)
-(86 56 00 48 35 71 89 07 05 44 44 37 44 60 21 58 51 54 17 58)
-(19 80 81 68 05 94 47 69 28 73 92 13 86 52 17 77 04 89 55 40)
-(04 52 08 83 97 35 99 16 07 97 57 32 16 26 26 79 33 27 98 66)
-(88 36 68 87 57 62 20 72 03 46 33 67 46 55 12 32 63 93 53 69)
-(04 42 16 73 38 25 39 11 24 94 72 18 08 46 29 32 40 62 76 36)
-(20 69 36 41 72 30 23 88 34 62 99 69 82 67 59 85 74 04 36 16)
-(20 73 35 29 78 31 90 01 74 31 49 71 48 86 81 16 23 57 05 54)
-(01 70 54 71 83 51 54 69 16 92 33 48 61 43 52 01 89 19 67 48)))
-
-
-(define la '(
-(50 77 91 08)
-(4 56 62 00)
-(49 13 36 65)
-(37 02 36 91)
-(66 33 13 80)
-(35 17 12 50)
-(18 38 64 70)
-(66 49 94 21)
-(34 89 63 72)
-(34 31 33 95)
-(09 53 56 92)
-(36 29 85 57)
-(51 54 17 58)
-(04 89 55 40)
-(33 27 98 66)
-(63 93 53 69)
-(04 42 16 73 38 25 39 11 24 94 72 18 08 46 29 32 40 62 76 36)
-(20 69 36 41 72 30 23 88 34 62 99 69 82 67 59 85 74 04 36 16)
-(20 73 35 29 78 31 90 01 74 31 49 71 48 86 81 16 23 57 05 54)
-(01 70 54 71 83 51 54 69 16 92 33 48 61 43 52 01 89 19 67 48)))
 
 
 (define (right max-value lat)
   (if (right-end? lat) 
       (begin
-        (displayln (list max-value (product-right-end lat)))
+       ; (displayln (list max-value (product-right-end lat)))
         (max max-value (product-right-end lat)))
       (let ((product-row (product-of-row (square-chip lat)))
             (product-col (product-of-col (square-chip lat)))
             (product-diag (product-of-diag (square-chip lat)))
             (product-reverse-diag (product-of-reverse-diag (square-chip lat))))
         (begin
-          (displayln (list max-value product-row product-col product-diag product-reverse-diag))
+        ;  (displayln (list max-value product-row product-col product-diag product-reverse-diag))
           (right
            (max max-value product-row product-col product-diag product-reverse-diag)
            (col-cdr lat))))))
@@ -379,9 +417,173 @@
       (display (/ (- end start) 1000))
       (displayln " seconds"))))
 
-(define la '(
-(1 1 1 1 1)
-(2 2 3 2 2)
-(3 8 3 3 6)
-(4 4 5 4 4)
-))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; euler 12
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (divisor-pairs n)
+  (define (find-divisor n test-divisor)
+    (cond
+     ((> (square test-divisor) n) '())
+     ((divide? n test-divisor)
+      (cons (list  test-divisor (/ n test-divisor))
+            (find-divisor n (+ test-divisor 1))))
+     (else (find-divisor n (+ test-divisor 1)))))
+  (find-divisor n 1))
+
+(define (divisor-list n)
+  (define (find-divisor n test-divisor)
+    (begin
+      (displayln (list n test-divisor))
+      (cond
+       ((> (square test-divisor) n) '())
+       ((divide? n test-divisor)
+        (append (list  test-divisor (/ n test-divisor))
+                (find-divisor n (+ test-divisor 1))))
+       (else (find-divisor n (+ test-divisor 1))))))
+  (find-divisor n 1))
+
+(define (dup-nums n)
+  (- (expt 2 (length (demp n)))
+     (* 2 (length (divisor-list n))))) 
+
+
+(define (num-of-value n lat)
+  (define (num-iter m lat)
+    (cond 
+     ((null? lat) m)
+     ((= (car lat) n) 
+      (num-iter (+ 1 m) (cdr lat)))
+     (else (num-iter m (cdr lat)))))
+  (num-iter 0 lat))
+
+(define (num-search lat)
+  (define (num-iter m lat)
+    (cond
+     ((null? lat) m)
+     ((= (car lat) 2) 
+      (num-iter (+ 1 m) (cdr lat)))
+     (else m)))
+  (num-iter 0 lat))
+
+(define multirember
+;  "remove all occurrences of a"
+  (lambda (a lat)
+    (cond 
+      ((null? lat) '())
+      ((eq? a (car lat))
+        (multirember a (cdr lat)))
+      (else (cons (car lat)
+              (multirember a (cdr lat)))))))
+
+(define latunique
+  (lambda (lat)
+    (cond
+      ((null? lat) '())
+      (else (cons (car lat)
+              (latunique
+                (multirember (car lat)
+                  (cdr lat))))))))
+
+(define (unique lat)
+  (map latunique lat))
+
+(define (arrange lat)
+  (latunique (sort lat <)))
+
+(define (atom-occur lat)
+  (define (num-of-atom n lat)
+    (cond
+     ((null? lat)
+      '())
+     ((null? (cdr lat))
+      (list n))
+     ((= (car lat) (cadr lat))
+      (num-of-atom (+ n 1) (cdr lat)))
+     (else
+      (cons n (num-of-atom 1 (cdr lat))))))
+  (num-of-atom 1 lat))
+
+(define (num-of-factor lat)
+  (let ((occur-list (atom-occur lat)))
+    (let ((uniq-prime (remove-atom > 1 occur-list))
+          (repeat-prime (remove-atom = 1 occur-list)))
+      (cond
+       ((null? repeat-prime)
+        (expt 2 (length uniq-prime)))
+       (else
+        (* (car repeat-prime)
+           (apply *
+                  (map (lambda (x) (+ x 1)) (cdr repeat-prime)))
+           (expt 2 (length uniq-prime))))))))
+
+(define (remove-atom proc n lat)
+  (cond 
+   ((null? lat)
+    lat)
+   ((proc (car lat) n)
+    (remove-atom proc n (cdr lat)))
+   (else
+    (cons
+     (car lat)
+     (remove-atom proc n (cdr lat))))))
+
+(define (euler n m)
+  (let ((prime-factor (sort (append (demp n) (demp (+ n 1))) <)))
+    (let ((num (num-of-factor prime-factor)))
+      (cond
+       ((>= num m)
+        n)
+       (else
+        (euler (+ n 1) m))))))
+
+
+(define (test-12 n m)
+  (let ((start (current-inexact-milliseconds))
+        (result (euler n m))
+        (end (current-inexact-milliseconds)))
+    (begin
+      (display "The result is ")
+      (displayln result)
+      (display "Consume time is ")
+      (display (/ (- end start) 1000))
+      (displayln " seconds"))))
+
+
+(define (test-demp n m)
+  (let ((start (current-inexact-milliseconds))
+        (result (demp-test n m ))
+        (end (current-inexact-milliseconds)))
+    (begin
+      (display "The result is ")
+    ;  (displayln result)
+      (display "Consume time is ")
+      (display (/ (- end start) 1000))
+      (displayln " seconds"))))
+
+
+(define (test-divisor n m)
+  (let ((start (current-inexact-milliseconds))
+        (result (divisor-test n m))
+        (end (current-inexact-milliseconds)))
+    (begin
+      (display "The result is ")
+     ; (displayln result)
+      (display "Consume time is ")
+      (display (/ (- end start) 1000))
+      (displayln " seconds"))))
+
+(define (divisor-test n m)
+  (cond ((> n m) (displayln "over."))
+        (else (begin
+                (divisor-list n)
+                (divisor-test (+ n 1) m)))))
+
+
+(define (demp-test n m)
+  (cond ((> n m) (displayln "over."))
+        (else (begin
+                (demp n)
+                (demp-test (+ n 1) m)))))
