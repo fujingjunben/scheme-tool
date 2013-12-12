@@ -14,8 +14,6 @@
       (list (- n 1) (fib (- n 1)))
       (fib-v (+ n 1) max)))
 
-(define (p)  (fib-r 28 big-num))
-
 (define (fib-r n numb)
   (if (= n 29)
       (begin
@@ -34,7 +32,7 @@
 (define (square n)
   (* n n))
 
-(define (prime-1n)
+(define (prime-1 n)
   (define (find-divisor n test-divisor)
 	(cond ((> (square test-divisor) n) #t)
 		  ((divide? test-divisor n) #f)
@@ -160,7 +158,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (diff-sum-square lat)
-  (* 2 (gather-sum 0 la)))
+  (* 2 (gather-sum 0 lat)))
 
 (define (gather-sum sum lat)
   (cond
@@ -214,8 +212,6 @@
      (chip-list nth lat)
      (chip-dec nth (cdr lat))))))
 
-(define (list-product lat)
-  (apply * lat))
 
 (define (euler8 nth lat)
   (define (helper max lat)
@@ -319,6 +315,9 @@
 (define (reverse-diag-chip start end lat)
   (let ((la (map reverse lat)))
     (diag-chip start end la)))
+
+(define (transpose lat)
+  (col-chip-list (length (car lat)) lat))
 
 (define (frame-chip row col la)
   (row-chip row (col-chip col la)))
@@ -490,8 +489,42 @@
 (define (unique lat)
   (map latunique lat))
 
-(define (arrange lat)
-  (latunique (sort lat <)))
+(define (occur-list lat)
+  (cond
+   ((null? lat)
+    '())
+   (else
+    (cons (occur (car lat) lat)
+          (occur-list (remove-atom = (car lat) lat))))))
+
+(define (exist? a lat)
+  (cond
+   ((null? lat)
+    #f)
+   ((eq? a (car lat))
+    #t)
+   (else
+    (exist? a (cdr lat)))))
+
+(define (occur a lat)
+  (cond
+   ((null? lat)
+    0)
+   ((eq? a (car lat))
+    (+ 1 (occur a (cdr lat))))
+   (else
+    (occur a (cdr lat)))))
+
+(define (remove-atom proc n lat)
+  (cond 
+   ((null? lat)
+    lat)
+   ((proc (car lat) n)
+    (remove-atom proc n (cdr lat)))
+   (else
+    (cons
+     (car lat)
+     (remove-atom proc n (cdr lat))))))
 
 (define (atom-occur lat)
   (define (num-of-atom n lat)
@@ -508,82 +541,84 @@
 
 (define (num-of-factor lat)
   (let ((occur-list (atom-occur lat)))
-    (let ((uniq-prime (remove-atom > 1 occur-list))
-          (repeat-prime (remove-atom = 1 occur-list)))
-      (cond
-       ((null? repeat-prime)
-        (expt 2 (length uniq-prime)))
-       (else
-        (* (car repeat-prime)
-           (apply *
-                  (map (lambda (x) (+ x 1)) (cdr repeat-prime)))
-           (expt 2 (length uniq-prime))))))))
+    (apply *
+           (map (lambda (x) (+ x 1)) occur-list))))
 
-(define (remove-atom proc n lat)
-  (cond 
-   ((null? lat)
-    lat)
-   ((proc (car lat) n)
-    (remove-atom proc n (cdr lat)))
+(define (euler n m pre)
+  (let ((factor-a (demp (/ n 2))))
+   (cond
+    ((>= (num-of-factor (sort (append factor-a pre) <)) m)
+     (list (- n 1) (/ (* n (- n 1)) 2)))
+    (else
+     (let ((factor-b (demp (+ n 1))))
+       (cond
+        ((>= (num-of-factor (sort (append factor-a factor-b) <)) m)
+         (list n (/ (* n (+ n 1)) 2)))
+        (else
+         (euler (+ n 2) m factor-b))))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; euler 13
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (read-data in)
+ (let ((line (read-line in)))
+   (cond
+    ((eof-object? line)
+     '())
+    (else
+     (cons line 
+           (read-data in))))))
+
+(define in (open-input-file "data.txt"))
+
+(define par (read-data in))
+
+(close-input-port in)
+
+(define num-list (map (lambda (x) (str->integer x)) par))
+
+(define sum-list (map list-sum (transpose num-list)))
+
+(define (euler lat new)
+  (cond
+   ((null? (cdr lat))
+    (cons (car lat) new))
    (else
-    (cons
-     (car lat)
-     (remove-atom proc n (cdr lat))))))
+    (let ((carry (quotient (car lat) 10))
+          (base (remainder (car lat) 10)))
+      (euler (cons (+ carry (cadr lat))
+                     (cddr lat))
+               (cons base new))))))
 
-(define (euler n m)
-  (let ((prime-factor (sort (append (demp n) (demp (+ n 1))) <)))
-    (let ((num (num-of-factor prime-factor)))
-      (cond
-       ((>= num m)
-        n)
-       (else
-        (euler (+ n 1) m))))))
-
-
-(define (test-12 n m)
-  (let ((start (current-inexact-milliseconds))
-        (result (euler n m))
-        (end (current-inexact-milliseconds)))
-    (begin
-      (display "The result is ")
-      (displayln result)
-      (display "Consume time is ")
-      (display (/ (- end start) 1000))
-      (displayln " seconds"))))
+(define (euler13)
+  (define in (open-input-file "data.txt"))
+  (define par (read-data in))
+  (close-input-port in)
+  (define num-list (map (lambda (x) (str->integer x)) par))
+  (define sum-list (map list-sum (transpose num-list)))
+  (displayln (euler (reverse sum-list) '())))
 
 
-(define (test-demp n m)
-  (let ((start (current-inexact-milliseconds))
-        (result (demp-test n m ))
-        (end (current-inexact-milliseconds)))
-    (begin
-      (display "The result is ")
-    ;  (displayln result)
-      (display "Consume time is ")
-      (display (/ (- end start) 1000))
-      (displayln " seconds"))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; euler 14
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (triple-list limit m n)
+  (cond
+   ((> m limit)
+    '())
+   ((divide? n 3)
+    (cons n
+          (triple-list limit (+ m 1) (- n 3))))
+   (else
+    (triple-list limit m (- n 1)))))
 
-(define (test-divisor n m)
-  (let ((start (current-inexact-milliseconds))
-        (result (divisor-test n m))
-        (end (current-inexact-milliseconds)))
-    (begin
-      (display "The result is ")
-     ; (displayln result)
-      (display "Consume time is ")
-      (display (/ (- end start) 1000))
-      (displayln " seconds"))))
-
-(define (divisor-test n m)
-  (cond ((> n m) (displayln "over."))
-        (else (begin
-                (divisor-list n)
-                (divisor-test (+ n 1) m)))))
-
-
-(define (demp-test n m)
-  (cond ((> n m) (displayln "over."))
-        (else (begin
-                (demp n)
-                (demp-test (+ n 1) m)))))
+(define (collatz-seq n)
+  (cond
+   ((= n 1)
+    '())
+   ((even? n)
+    (cons n (collatz-seq (/ n 2))))
+   (else
+    (cons n (collatz-seq (+ (* 3 n) 1))))))
