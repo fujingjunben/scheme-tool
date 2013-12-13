@@ -99,7 +99,7 @@
      (else
       (find-divisor n (cdr lat)))))
   
-  (let ((prime-list (soe (integer-sqrt n))))
+  (let ((prime-list (soe (car (exact-integer-sqrt n)))))
     (find-divisor n prime-list)))
 
 (define (soe n)
@@ -405,19 +405,6 @@
   (cond ((bottom? lat) (max (right max-value lat) (product-bottom lat)))
         (else (down (right max-value lat) (cdr lat)))))
 
-(define (test proc)
-  (let ((start (current-inexact-milliseconds))
-        (result proc)
-        (end (current-inexact-milliseconds)))
-    (begin
-      (display "The result is ")
-      (displayln result)
-      (display "Consume time is ")
-      (display (/ (- end start) 1000))
-      (displayln " seconds"))))
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; euler 12
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -570,16 +557,6 @@
      (cons line 
            (read-data in))))))
 
-(define in (open-input-file "data.txt"))
-
-(define par (read-data in))
-
-(close-input-port in)
-
-(define num-list (map (lambda (x) (str->integer x)) par))
-
-(define sum-list (map list-sum (transpose num-list)))
-
 (define (euler lat new)
   (cond
    ((null? (cdr lat))
@@ -616,9 +593,74 @@
 
 (define (collatz-seq n)
   (cond
-   ((= n 1)
-    '())
-   ((even? n)
-    (cons n (collatz-seq (/ n 2))))
-   (else
-    (cons n (collatz-seq (+ (* 3 n) 1))))))
+   ((= n 1) '(1))
+   ((even? n) (cons n (collatz-seq (/ n 2))))
+   (else (cons n (collatz-seq (+ (* 3 n) 1))))))
+
+(define (collatz begin)
+  (define (collatz-help n lat)
+    (cond
+     ((> n begin)
+      lat)
+     ((exist? n lat)
+      (pos n lat))
+     (else
+      (collatz-help (+ n 1) (cons (collatz-num n lat) lat)))))
+  (collatz-help begin '()))
+
+(define (collatz-num init)
+  (define (collatz-iter n m)
+    (cond
+     ((= n 1)
+      m)
+     ((even? n)
+      (collatz-iter (/ n 2) (+ m 1)))
+     (else
+      (collatz-iter (+ (* 3 n) 1) (+ m 1)))))
+  (collatz-iter init 1))
+
+
+(define (euler14)
+  (define (help-iter m len n)
+    (let ((collatz (collatz-num n)))
+      (cond
+       ((> n 1000000)
+        (list m len))
+       ((> collatz len)
+        (help-iter n collatz (+ n 2)))
+       (else
+        (help-iter m len (+ n 2))))))
+  (help-iter 0 0 1))
+
+(define (collatz-longest limit)
+  (define (collatz init n longest collatz-vector)
+    (let ((value (vector-ref collatz-vector n)))
+      (cond
+       ((> init limit) longest)
+       ((= n 1) 1)
+       (else
+        (cond
+         ((and value (= n init))
+          (cond
+           ((> value (car longest))
+            (collatz (+ n 1) (+ n 1) (list value n) collatz-vector))
+           (else
+            (collatz (+ n 1) (+ n 1) longest collatz-vector))))
+         ((and value (not (= n init)))
+          value)
+         (else
+          (let 
+              ((count
+                (+ 1
+                   (cond
+                    ((even? n)
+                     (collatz init (/ n 2) longest collatz-vector))
+                    (else
+                     (collatz init (+ 1 (* 3 n)) longest collatz-vector))))))
+            (begin
+              (vector-set! collatz-vector n count)
+              (collatz init n longest collatz-vector)))))))))
+
+  (let 
+      ((collatz-vector (make-vector 50000000 #f)))
+    (collatz 2 2 '(0) collatz-vector)))
