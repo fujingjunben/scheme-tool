@@ -26,6 +26,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; projecteuler 3
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (inc n)
+  (+ n 1))
+
+(define (dec n)
+  (- n 1))
+
 (define (divide? b a)
   (= (remainder b a) 0))
 
@@ -197,11 +203,21 @@
 ; euler 8
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (str->integer str)
-  (map char->int (string->list str)))
+(define (number->list number)
+  (map
+   (lambda (x) (string->number (string x)))
+   (string->list (number->string number))))
+
+(define (str_int->list str)
+  (map 
+   (lambda (x) (string->number (string x)))
+   (string->list str)))
 
 (define (char->int c)
   (- (char->integer c) 48))
+
+(define (int->list int)
+  (str_int->list (str)))
 
 (define (chip-dec nth lat)
   (cond 
@@ -287,11 +303,16 @@
        (else (cons (caar lat)
                    (col-car (cdr lat))))))
 
+(define (col-car-map l)
+  (map car l))
+
 (define (col-cdr lat)
   (cond ((null? lat) lat)
         (else (cons (cdar lat)
                     (col-cdr (cdr lat))))))
 
+(define (col-cdr-map l)
+  (map cdr l))
 (define (col-chip-list nth lat)
   (cond ((null? lat) lat)
         ((> nth (length (car lat)))
@@ -569,12 +590,12 @@
                (cons base new))))))
 
 (define (euler13)
-  (define in (open-input-file "data.txt"))
-  (define par (read-data in))
-  (close-input-port in)
-  (define num-list (map (lambda (x) (str->integer x)) par))
-  (define sum-list (map list-sum (transpose num-list)))
-  (displayln (euler (reverse sum-list) '())))
+  (let* ((in (open-input-file "data.txt"))
+         (par (read-data in)))
+    (close-input-port in)
+    (let ((num-list (map (lambda (x) (str_int->list x)) par))
+          (sum-list (map list-sum (transpose num-list))))
+      (displayln (euler (reverse sum-list) '())))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -632,7 +653,7 @@
         (help-iter m len (+ n 2))))))
   (help-iter 0 0 1))
 
-(define (collatz-longest limit)
+(define (collatz-longest-1 limit)
   (define (collatz init n longest collatz-vector)
     (let ((value (vector-ref collatz-vector n)))
       (cond
@@ -664,3 +685,114 @@
   (let 
       ((collatz-vector (make-vector 50000000 #f)))
     (collatz 2 2 '(0) collatz-vector)))
+
+(define (collatz-longest init)
+  (define (collatz init n longest collatz-list)
+    (let* ((v (assoc n collatz-list))
+           (value (if
+                   (list? v)
+                   (cadr v)
+                   v))
+           (l (cadr longest)))
+      (begin
+       ; (displayln (list n value))
+        (cond
+         ((= init 1) longest)
+         (value
+          (cond
+           ((= n init)
+            (cond
+             ((> value l)
+              (collatz (- n 2) (- n 2) (list n value) collatz-list))
+             (else
+              (collatz (- n 2) (- n 2) longest collatz-list))))
+           (else value)))
+         (else
+          (let* 
+              ((count
+                (+ 1
+                   (cond
+                    ((even? n)
+                     (collatz init (/ n 2) longest collatz-list))
+                    (else
+                     (collatz init (+ 1 (* 3 n)) longest collatz-list)))))
+               (lat (cons (list n count) collatz-list)))
+            (collatz init n longest lat)))))))
+
+  (collatz init init '(0 0) '((2 2))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; euler 15
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (displayln x)
+  (display x)
+  (newline))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; euler 17
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define num-hash '(
+ (0 "") (1 "one") (2 "two") (3 "three") (4 "four") 
+ (5 "five") (6 "six") (7 "seven") (8 "eight") (9 "nine")
+ (10 "ten") (11 "eleven") (12 "twelve") (13 "thirteen")
+ (14 "fourteen") (15 "fifteen") (16 "sixteen") (17 "seventeen")
+ (18 "eighteen") (19 "nineteen") (20 "twenty") (30 "thirty")
+ (40 "forty") (50 "fifty") (60 "sixty") (70 "seventy") (80 "eighty")
+ (90 "ninety") (100 "hundred") (1000 "thousand")))
+
+(define (print-num n)
+  (displayln (num->word n)))
+
+(define (fetch-word n)
+  (cadr (assoc n num-hash)))
+
+(define (fetch-two tens ones)
+  (let ((tenth (* tens 10)))
+    (cond 
+     ((zero? ones)
+      (fetch-word tenth))
+     ((= tenth 10)
+      (fetch-word (+ tenth ones)))
+     (else
+      (string-append (fetch-word tenth)
+                     (if (zero? tenth) "" "-")
+                     (fetch-word ones))))))
+
+(define (fetch-three hundreds tens ones)
+  (string-append 
+   (fetch-word hundreds)
+   (cond
+    ((and (zero? tens) (zero? ones))
+     " hundred")
+    (else
+     " hundred and "))
+   (fetch-two tens ones)))
+
+(define (num->word n)
+  (let ((nlist (number->list n)))
+    (cond
+     ((< n 20) 
+      (fetch-word n))
+     ((< n 100)
+      (fetch-two (car nlist) (cadr nlist)))
+     ((< n 1000)
+      (fetch-three (car nlist) (cadr nlist) (caddr nlist)))
+     (else
+      "one thousand"))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; euler 20
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (fac n)
+  (define (fac-iter a n)
+    (cond
+     ((= n 1) a)
+     (else
+      (fac-iter (* a n) (dec n)))))
+  (fac-iter 1 n))
+
+(define (euler20)
+  (list-sum (number->list (fac 100))))
