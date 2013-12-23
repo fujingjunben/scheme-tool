@@ -414,6 +414,14 @@
                       (make-unique-tuple (- size 1) (- i 1))))
                (enumerate-interval 1 max-number))))
 
+(define (make-unique-tuple size max-number)
+  (if (= size 0)
+      (list '())
+      (flatmap (lambda (i)
+                 (map (lambda (t) (cons i t))
+                      (make-unique-tuple (- size 1) (- i 1))))
+               (enumerate-interval 1 max-number))))
+
   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; 2.42 eight queens puzzle
@@ -437,17 +445,22 @@
   (cadr coordinate))
 
 (define (safe? k positions)
+  (define (same-row r1 r2)
+    (= r1 r2))
+  (define (same-diag c1 r1 c2 r2)
+    (= (abs (- c1 c2))
+       (abs (- r1 r2))))
+  
   (let ((kth (select-kth positions))
         (rest (select-rest positions)))
     (let ((kth-row (get-row kth)))
       (accumulate (lambda (x y) (and x y))
                   #t
                   (map (lambda (p)
-                         (let ((rest-col (get-col p))
-                               (rest-row (get-row p)))
-                           (not (or (= kth-row rest-row)
-                                   (= (abs (- k rest-col))
-                                      (abs (- kth-row rest-row)))))))
+                         (let ((pre-col (get-col p))
+                               (pre-row (get-row p)))
+                           (not (or (same-row kth-row pre-row)
+                                    (same-diag k kth-row pre-col pre-row)))))
                        rest)))))
 
 
@@ -468,3 +481,168 @@
           (queen-cols (- k 1))))))
   (queen-cols board-size))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2.44
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (up-split painter n)
+  (if (= n 0)
+      painter
+      (let ((up (up-split painter (- n 1))))
+        (below painter (beside up up)))))
+
+(define right-split (split beside below))
+
+(define (split h v)
+  (lambda (painter n)
+    (let ((smaller ((split v h) painter (- n 1))))
+      (h painter (v smaller smaller)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2.46
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (make-vect x y)
+  (list x y))
+
+(define (xcor-vect v)
+  (car v))
+
+(define (ycor-vect v)
+  (cadr v))
+
+(define (scale-vect s v)
+  (make-vect (* s (xcor-vect v))
+             (* s (ycor-vect v))))
+
+(define (op-vect op)
+  (lambda (v1 v2)
+    (make-vect (op (xcor-vect v1)
+                   (xcor-vect v2))
+               (op (ycor-vect v1)
+                   (ycor-vect v2)))))
+
+(define add-vect (op-vect +))
+
+(define sub-vect (op-vect -))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2.47
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (make-frame1 origin edge1 edge2)
+  (list origin edge1 edge2))
+
+(define (origin-frame frame)
+  (car frame))
+
+(define (edge1-frame frame)
+  (cadr frame))
+
+(define (edge2-frame frame)
+  (caddr frame))
+
+(define (make-frame2 origin edge1 edge2)
+  (cons origin (cons edge1 edge2)))
+
+(define (frame-coord-map frame)
+  (lambda (v)
+    (add-vect
+     (origin-frame frame)
+     (add-vect (scale-vect (xcor-vect v)
+                           (edge1-frame frame))
+               (scale-vect (ycor-vect v)
+                           (edge2-frame frame))))))
+
+(define origin (make-vect 0 0))
+
+(define edge1 (make-vect 1 0))
+
+(define edge2 (make-vect 0 2))
+
+(define a-frame (make-frame1 origin edge1 edge2))
+
+((frame-coord-map a-frame) (make-vect 3 2))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2.48
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (make-segment start end)
+  (list start end))
+
+(define (start-segment seg)
+  (car seg))
+
+(define (end-segment seg)
+  (cadr seg))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2.49
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define start (map make-vect '(0 1 1 0) '(0 0 1 1)))
+
+(define end (map make-vect '(1 1 0 0) '(0 1 1 0)))
+
+(define seg-list (map make-segment start end))
+
+(segments->painter seg-list)
+
+(define (segment->painter segment-list)
+  (lambda (frame)
+    (for-each
+     (lambda (segment)
+       (draw-line
+        ((frame-coord-map frame) (start-segment segment))
+        ((frame-coord-map frame) (end-segment segment))))
+     segment-list)))
+
+(define (for-each op l)
+  (define (iter op l result)
+    (if (null? l)
+        result
+        (iter op (cdr l) (op (car l)))))
+  (iter op l '()))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2.50
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (flip-horiz)
+  (transform-painter painter
+                     (make-vect 1.0 0.0)
+                     (make-vect 0.0 0.0)
+                     (make-vect 1.0 1.0)))
+
+(define (rotate180 painter)
+  (transform-painter painter
+                     (make-vect 1.0 1.0)
+                     (make-vect 0.0 1.0)
+                     (make-vect 1.0 0.0)))
+
+(define (rotate270 painter)
+  (transform-painter painter
+                     (make-vect 0.0 1.0)
+                     (make-vect 0.0 0.0)
+                     (make-vect 1.0 1.0)))
+
+(define (below painter1 painter2)
+  (let ((split-point (make-vect 0.0 0.5)))
+    (let ((paint-below
+           (transform-painter painter1
+                              (make-vect 0.0 0.0)
+                              (make-vect 1.0 0.0)
+                              split-point))
+          (paint-above
+           (transform-painter painter2
+                              split-point
+                              (make-vect 1.0 0.5)
+                              (make-vect 0.0 1.0))))
+      (lambda (frame)
+        (paint-below frame)
+        (paint-above frame)))))
+
+(define (below-using-beside painter1 painter2)
+  (rotate90 (beside (rotate270 painter1) (rotate270 painter2))))
