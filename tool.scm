@@ -113,3 +113,179 @@
                       (make-tuple (- size 1) start end)))
                (enumerate-interval start end))))
 
+
+
+(define (deriv exp var)
+  (cond ((number? exp) 0)
+        ((variable? exp)
+         (if (same-variable? exp var) 1 0))
+        ((sum? exp)
+         (make-sum (deriv (addend exp) var)
+                   (deriv (augend exp) var)))
+        ((product? exp)
+         (make-sum
+          (make-product (multiplier exp)
+                        (deriv (multiplicand exp) var))
+          (make-product (deriv (multiplier exp) var)
+                        (multiplicand exp))))
+        ((exponent? exp)
+         (let ((b (base exp))
+               (n (exponent exp)))
+           (make-product n
+                         (make-product (make-exponentiation b (- n 1))
+                                       (deriv b var)))))
+        (else
+         (error "unkown expression type --DERIV" exp))))
+
+(define (variable? x) (symbol? x))
+
+(define (same-variable? v1 v2)
+  (and (variable? v1) (variable? v2) (eq? v1 v2)))
+
+(define (=number? exp num)
+  (and (number? exp) (= exp num)))
+
+(define (make-product-revised m1 . m2)
+  (define (iter m1 m2)
+    (display m2)
+    (newline)
+    (if (null? (cdr m2))
+        (simplify-product m1 (car m2))
+        (list '* m1 (iter (car m2) (cdr m2)))))
+  (iter m1 m2))
+
+(define (simplify-product m1 m2)
+  (cond ((or (=number? m1 0) (=number? m2 0)) 0)
+        ((=number? m1 1) m2)
+        ((=number? m2 1) m1)
+        ((and (number? m1) (number? m2) (* m1 m2)))
+        (else (list '* m1 m2))))
+
+(define (prefix-make-sum a1 a2)
+  (cond ((=number? a1 0) a2)
+        ((=number? a2 0) a1)
+        ((and (number? a1) (number? a2) (+ a1 a2)))
+        (else (list '+ a1 a2))))
+
+(define (prefix-sum? x)
+  (and (pair? x) (eq? (car x) '+)))
+
+(define (prefix-addend s) (cadr s))
+
+(define (prefix-augend s)
+  (let ((rest (cddr s)))
+    (if (null? (cdr rest))
+        (car rest)
+        (cons '* rest))))
+
+(define (prefix-make-product m1 m2)
+  (cond ((or (=number? m1 0) (=number? m2 0)) 0)
+        ((=number? m1 1) m2)
+        ((=number? m2 1) m1)
+        ((and (number? m1) (number? m2) (* m1 m2)))
+        (else (list '* m1 m2))))
+
+(define (prefix-product? x)
+  (and (pair? x) (eq? (car x) '*)))
+
+(define (prefix-multiplier p) (cadr p))
+
+(define (prefix-multiplicand p)
+  (let ((rest (cddr p)))
+    (if (null? (cdr rest))
+        (car rest)
+        (cons '* rest))))
+
+(define (prefix-exponent? x)
+  (and (pair? x) (eq? (car x) 'expt)))
+
+(define (prefix-base s)
+  (cadr s))
+
+(define (prefix-exponent s)
+  (caddr s))
+
+(define (prefix-make-exponentiation base exponent)
+  (cond ((=number? exponent 0) 1)
+        ((=number? exponent 1) base)
+        (else (list 'expt base exponent))))
+
+(define (sum-2.58? x)
+  (and (pair? x) (eq? (cadr x) '+)))
+
+(define (addend-2.58 s)
+  (car s))
+
+(define (augend-2.58 s)
+  (let ((rest (cddr s)))
+    (if (null? (cdr rest))
+        (car rest)
+        (cons (car rest) (cons '+ (cdr rest))))))
+
+(define (product? x)
+  (and (pair? x) (eq? (cadr x) '*)))
+
+(define (multiplier p)
+  (car p))
+
+(define (multiplicand-2.58 p)
+  (let ((rest (cddr p)))
+    (if (null? (cdr rest))
+        (car rest)
+        (cons (car rest) (cons '* (cdr rest))))))
+
+(define (multiplicand p)
+  (let ((rest (cddr p)))
+    (if (null? (cdr rest))
+        (car rest)
+        rest)))
+
+
+
+(define (make-product m1 m2)
+  (cond ((or (=number? m1 0) (=number? m2 0)) 0)
+        ((=number? m1 1) m2)
+        ((=number? m2 1) m1)
+        ((and (number? m1) (number? m2) (* m1 m2)))
+        (else (list m1 '* m2))))
+
+(define (make-sum a1 a2)
+  (cond ((=number? a1 0) a2)
+        ((=number? a2 0) a1)
+        ((and (number? a1) (number? a2) (+ a1 a2)))
+        (else (list a1 '+ a2))))
+
+(define (memb item x)
+  (cond ((null? x) #f)
+        ((eq? item (car x)) '())
+        (else (cons (car x) (memb item (cdr x))))))
+
+(define (mema item x)
+  (cond ((null? x) #f)
+        ((eq? item (car x)) (cdr x))
+        (else (mema item (cdr x)))))
+
+(define (addend s)
+  (let ((a (memb '+ s)))
+    (if (null? (cdr a))
+        (car a)
+        a)))
+
+(define (augend s)
+  (let ((rest (mema '+ s)))
+    (if (null? (cdr rest))
+        (car rest)
+        rest)))
+
+(define (sum? x)
+  (if (memq '+ x)
+      #t
+      #f))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; 2.3.3
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define (element-of-set? x set)
+  (cond ((null? set) #f)
+        ((equal? x (car set)) #t)
+        (else (element-of-set? x (cdr set)))))
